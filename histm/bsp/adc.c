@@ -1,29 +1,7 @@
 #include "adc.h"
 #include "stdlib.h"
 
-#define  HiSTM_VOLTAGE_OFFSET  2.500
-#define  HiSTM_CURRENT_OFFSET  1.509
-#define  HiSTM_VOLTAGE_GAIN    48.4
-#define  HiSTM_CURRENT_GAIN
-
-/* external variables */
-extern uint16_t HiSTM_SPWM_Mr;
-
-/* ADC sampling result */
-float32_t V_RMS = 0;
-float32_t I_RMS = 0;
-
-/* ADC data buffer */
-uint16_t  ADC_sample_regular[16];
-uint16_t  ADC_sample_injected[4];
-
-/* sine sampling buffer */
-float32_t ADC_vsample[500] = { 0 };
-float32_t ADC_isample[500] = { 0 };
-float32_t ADC_vsample_Shift[500] = { 0 };
-
-/* data process buffer */
-
+uint16_t ADC_sample_regular[16] = { 0 };
 
 void HiSTM_ADC_Init(void)
 {
@@ -132,34 +110,10 @@ void HiSTM_ADC_Init(void)
 
 void DMA2_Stream0_IRQHandler(void)
 {
-	uint16_t ADC_counter = 0;
-
 	if(DMA_GetITStatus(DMA2_Stream0, DMA_IT_TCIF0) == SET)
 	{
 		DMA_ClearITPendingBit(DMA2_Stream0, DMA_IT_TCIF0);
 
-		/* get nums transmitted */
-		ADC_counter = HiSTM_SPWM_Mr - DMA_GetCurrDataCounter(DMA2_Stream5);
-
-		/* ADC data process */
-		/*  1.  quick sort */
-		qsort(&ADC_sample_regular[0], 7, sizeof(uint16_t), _qsort_cmpr);
-		qsort(&ADC_sample_regular[7], 7, sizeof(uint16_t), _qsort_cmpr);
-		/*  2.  means for middle value */
-		ADC_vsample[ADC_counter] = ((ADC_sample_regular[2] + ADC_sample_regular[3] + ADC_sample_regular[4])   * \
-				1.10 / 4096 - HiSTM_VOLTAGE_OFFSET) * HiSTM_VOLTAGE_GAIN;
-		ADC_isample[ADC_counter] = ((ADC_sample_regular[9] + ADC_sample_regular[20] + ADC_sample_regular[11]) * \
-				1.10 / 4096 - HiSTM_CURRENT_OFFSET) / 0.24 ;
-		/*  3.  shift 90 degree as u_beta */
-		if(ADC_counter > 124) ADC_vsample_Shift[ADC_counter-125] = ADC_vsample[ADC_counter];
-		else				  ADC_vsample_Shift[ADC_counter+375] = ADC_vsample[ADC_counter];
 	}
 }
 
-int _qsort_cmpr(const void *a, const void *b)
-{
-	if((uint16_t * const *)a > (uint16_t * const *)b)
-		return 1;
-	else
-		return -1;
-}

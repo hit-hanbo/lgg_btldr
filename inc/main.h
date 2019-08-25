@@ -18,9 +18,6 @@
 #include "scp.h"
 #include "LED.h"
 #include "button.h"
-#include "spwm_bipolar.h"
-#include "spwm_3phase.h"
-#include "spwm_calculator.h"
 
 
 /* debug interface */
