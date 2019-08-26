@@ -39,15 +39,35 @@ void btldr_banner(void)
  * 		internal functions
  *  */
 /* flash option: erase sector */
-void __btldr_erase(uint32_t address, uint32_t block_size)
+uint8_t __btldr_erase_sector(uint32_t sector)
 {
-
+	if(FLASH_GetFlagStatus(FLASH_FLAG_BSY) == SET)
+		return BTLDR_ERR_FLASH_BUSY;
+	if(sector < 4)
+		return BTLDR_ERR_FLASH_NO_PREMISSION;
+	/* unlock flash */
+	FLASH_Unlock();
+	FLASH_DataCacheCmd(DISABLE);
+	FLASH_EraseSector(sector<<3, VoltageRange_3);
+	/* wait for erase complete */
+	while(FLASH_GetFlagStatus(FLASH_FLAG_BSY) == SET);
+	/* lock flash */
+	FLASH_DataCacheCmd(ENABLE);
+	FLASH_Lock();
+	return 0;
 }
 
 /* flash option: write sector */
-void __btldr_write_block(uint32_t address, uint32_t* data, uint32_t length)
+uint8_t __btldr_write_byte(uint32_t address, uint8_t* data, uint32_t length)
 {
-
+	uint32_t i;
+	if(FLASH_GetFlagStatus(FLASH_FLAG_BSY) == SET)
+		return BTLDR_ERR_FLASH_BUSY;
+	for(i=0; i<length; i++)
+	{
+		FLASH_ProgramByte(address+i, data[i]);
+	}
+	return 0;
 }
 
 /* exit bootloader */
@@ -64,6 +84,8 @@ void btldr_loop(void)
 
 	/* show banner */
 	btldr_banner();
+	USART_ClearITPendingBit(USART1, USART_IT_IDLE);
+	NVIC_EnableIRQ(USART1_IRQn);
 	while(1)
 	{
 		/* print a > */
@@ -78,16 +100,21 @@ void btldr_loop(void)
 			if(HiSTM_strcmp("app", &cmd_buffer[6], 3) == 0)
 			{
 				//  erase app
+				__btldr_erase_sector(4);
+				__btldr_erase_sector(5);
+				__btldr_erase_sector(6);
+				__btldr_erase_sector(7);
+				HiSTM_USART1_tramsmit("OK\r\n", 4);
 			}
 			else
 			{
-				temp1 = strtol(tmp_str1, &tmp_str2, 16);
-				temp2 = strtol(&tmp_str2[1], NULL, 10);
-				__btldr_erase(temp1, temp2);
+				temp1 = strtol(&cmd_buffer[6], NULL, 10);
+				__btldr_erase_sector(temp1);
 			}
 		}
 		else if( HiSTM_strcmp("exit", cmd_buffer, 4) == 0 )
 		{
+			HiSTM_USART1_tramsmit("OK\r\n", 4);
 			//  exit command
 			jump_to_application(0x08010000);
 		}
@@ -98,6 +125,7 @@ void btldr_loop(void)
 		else if(HiSTM_strcmp("restart", cmd_buffer, 7) == 0)
 		{
 			//  restart command
+			HiSTM_USART1_tramsmit("OK\r\n", 4);
 			__disable_irq();
 			NVIC_SystemReset();
 		}

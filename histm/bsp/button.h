@@ -8,7 +8,7 @@
 #include "stm32f4xx_syscfg.h"
 #include "misc.h"
 #include "scp.h"
-
+#include "btldr.h"
 
 #define  BSP_HiSTM_BTN_A_PORT   GPIOC
 #define  BSP_HiSTM_BTN_A_PIN    GPIO_Pin_13

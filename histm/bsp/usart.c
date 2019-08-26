@@ -1,4 +1,5 @@
 #include "usart.h"
+#include "string.h"
 
 extern uint8_t cmd_buffer[1024];
 
@@ -92,7 +93,6 @@ void HiSTM_USART1_init(void)
 
 	USART_Cmd(USART1, ENABLE);
 	DMA_Cmd(DMA2_Stream5, ENABLE);
-	DMA_Cmd(DMA2_Stream7, ENABLE);
 }
 
 /*
@@ -131,6 +131,17 @@ uint8_t HiSTM_USART1_tramsmit(uint8_t* data, uint16_t length)
 	DMA2_Stream7->M0AR = (uint32_t) data;
 	DMA2_Stream7->NDTR = length;
 	DMA_Cmd(DMA2_Stream7, ENABLE);
+	return 0x00;
+}
+
+uint8_t HiSTM_USART1_send_string(uint8_t* data)
+{
+	/* check if txDMA idle */
+	if( DMA_GetCmdStatus(DMA2_Stream7) != DISABLE )
+		return TXERR_txDMA_BUSY;
+
+	HiSTM_USART1_tramsmit(data, strlen(data));
+
 	return 0x00;
 }
 

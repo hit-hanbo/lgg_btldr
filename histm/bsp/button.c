@@ -1,7 +1,6 @@
 #include "button.h"
 #include "arm_math.h"
 
-extern uint8_t no_jump_flag;
 
 void bsp_HiSTM_button_init_IT(void)
 {
@@ -72,15 +71,15 @@ void EXTI15_10_IRQHandler(void)
 	{
 		EXTI_ClearITPendingBit(EXTI_Line13);
 		//  do something
-		no_jump_flag = 1;
 	}
 	/* key B callback */
 	else if(EXTI_GetITStatus(EXTI_Line14))
 	{
 		EXTI_ClearITPendingBit(EXTI_Line14);
 		//  do something
-		SysTick->CTRL ^= (1 << 0);
-		no_jump_flag ^= 1;
+		HiSTM_SCP_clear(0xFFFF);
+		HiSTM_SCP_display_string(0,0,"bootloader",HiSTM_SCP_CHARMODE_NOOVERLYING,0x0000,0xFFFF);
+		btldr_loop();
 	}
 	/* key C callback */
 	else if(EXTI_GetITStatus(EXTI_Line15))

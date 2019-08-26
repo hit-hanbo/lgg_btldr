@@ -19,6 +19,7 @@
 #include "LED.h"
 #include "button.h"
 #include "btldr.h"
+#include "usart.h"
 
 /* debug interface */
 #include "stm32f4xx_usart.h"
