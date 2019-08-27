@@ -23,6 +23,7 @@ void HiSTM_USART1_init(void)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
+	RCC_AHB1PeriphClockCmd(RCC_AHB1ENR_DMA2EN, ENABLE);
 
 	/* init usart1 */
 	usart_init_struct.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
@@ -45,6 +46,7 @@ void HiSTM_USART1_init(void)
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_USART1);
 
 	/* init dma */
+	DMA_StructInit(&dma_init_struct);
 	//  rx buffer
 	dma_init_struct.DMA_Channel = DMA_Channel_4;
 	dma_init_struct.DMA_DIR = DMA_DIR_PeripheralToMemory;
@@ -60,8 +62,10 @@ void HiSTM_USART1_init(void)
 	dma_init_struct.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
 	USART_DMACmd(USART1, USART_DMAReq_Rx, ENABLE);
 	DMA_Init(DMA2_Stream5, &dma_init_struct);
-	DMA_ITConfig(DMA2_Stream5, DMA_IT_TCIF4, ENABLE);
-	DMA_ClearITPendingBit(DMA2_Stream5, DMA_IT_TCIF4);
+	DMA_ITConfig(DMA2_Stream5, DMA_IT_TCIF5, ENABLE);
+	DMA_ClearITPendingBit(DMA2_Stream5, DMA_IT_TCIF5);
+
+	DMA_StructInit(&dma_init_struct);
 
 	//  tx buffer
 	dma_init_struct.DMA_Channel = DMA_Channel_4;
@@ -87,12 +91,14 @@ void HiSTM_USART1_init(void)
 	NVIC_Init(&nvic_init_struct);
 
 	nvic_init_struct.NVIC_IRQChannel = USART1_IRQn;
-	nvic_init_struct.NVIC_IRQChannelCmd = DISABLE;
+	nvic_init_struct.NVIC_IRQChannelCmd = ENABLE;
 	nvic_init_struct.NVIC_IRQChannelPreemptionPriority = 2;
 	nvic_init_struct.NVIC_IRQChannelSubPriority = 0;
+	NVIC_Init(&nvic_init_struct);
+	NVIC_EnableIRQ(USART1_IRQn);
 
 	USART_Cmd(USART1, ENABLE);
-	DMA_Cmd(DMA2_Stream5, ENABLE);
+	DMA2_Stream5->CR |= (1 << 0);
 }
 
 /*
@@ -117,6 +123,9 @@ void USART1_IRQHandler(void)
 		usart_rx_status  = ( tmp_counter | ( 1 << 31 ) );
 
 		//  4.  configure & enable rxDMA
+		DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_HTIF5);
+		DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_TCIF5);
+		DMA_ClearFlag(DMA2_Stream5, DMA_FLAG_FEIF5);
 		DMA2_Stream5->NDTR = USART_RX_BLOCK_SIZE;
 		DMA2_Stream5->M0AR = (uint32_t)usart_rx_buffer;
 		DMA_Cmd(DMA2_Stream5, ENABLE);
@@ -128,9 +137,14 @@ uint8_t HiSTM_USART1_tramsmit(uint8_t* data, uint16_t length)
 	/* check if txDMA idle */
 	if( DMA_GetCmdStatus(DMA2_Stream7) != DISABLE )
 		return TXERR_txDMA_BUSY;
-	DMA2_Stream7->M0AR = (uint32_t) data;
+	/* clear DMA IT flag */
+	DMA_ClearFlag(DMA2_Stream7, DMA_FLAG_TCIF7);
+	DMA_ClearFlag(DMA2_Stream7, DMA_FLAG_FEIF7);
+	DMA_ClearFlag(DMA2_Stream7, DMA_FLAG_HTIF7);
+
+	DMA2_Stream7->M0AR = (uint32_t)data;
 	DMA2_Stream7->NDTR = length;
-	DMA_Cmd(DMA2_Stream7, ENABLE);
+	DMA2_Stream7->CR |= (1 << 0);
 	return 0x00;
 }
 

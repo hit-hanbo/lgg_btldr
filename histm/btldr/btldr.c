@@ -32,7 +32,18 @@ void jump_to_application(uint32_t app_addr)
  * */
 void btldr_banner(void)
 {
+	HiSTM_SCP_clear(0xFFFF);
+	HiSTM_SCP_display_string(0,0,"bootloader",HiSTM_SCP_CHARMODE_NOOVERLYING,0x0000,0xFFFF);
 	HiSTM_USART1_tramsmit("hi BootLoader\r\n", 15);
+	HiSTM_Delay(10);
+	HiSTM_USART1_tramsmit("\
+	 #                 #####   ##### \r\n\
+	 #       # #    # #     # #     #\r\n\
+	 #       # ##   # #       #      \r\n\
+	 #       # # #  # #  #### #  ####\r\n\
+	 #       # #  # # #     # #     #\r\n\
+	 #       # #   ## #     # #     #\r\n\
+	 ####### # #    #  #####   ##### \r\n>", 255);
 }
 
 /*
@@ -84,14 +95,14 @@ void btldr_loop(void)
 
 	/* show banner */
 	btldr_banner();
-	USART_ClearITPendingBit(USART1, USART_IT_IDLE);
-	NVIC_EnableIRQ(USART1_IRQn);
 	while(1)
 	{
+		HiSTM_Delay(10);
 		/* print a > */
-		HiSTM_USART1_tramsmit(">", 1);
+		HiSTM_USART1_tramsmit("> ", 2);
 		/* wait for command */
 		while((usart_rx_status & (1 << 31)) == 0);
+		usart_rx_status &= (~(1 << 31));
 		/* get string length */
 		if ( HiSTM_strcmp("erase", cmd_buffer, 5) == 0 )
 		{
@@ -109,6 +120,9 @@ void btldr_loop(void)
 			else
 			{
 				temp1 = strtol(&cmd_buffer[6], NULL, 10);
+				HiSTM_USART1_tramsmit("erase sector:", 13);
+				HiSTM_USART1_tramsmit(temp1+30, 1);
+				HiSTM_USART1_tramsmit("\r\n", 2);
 				__btldr_erase_sector(temp1);
 			}
 		}

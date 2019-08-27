@@ -7,6 +7,7 @@
 #include "stm32f4xx_flash.h"
 #include "arm_math.h"
 #include "usart.h"
+#include "scp.h"
 
 typedef  void (*pFunction)(void);
 

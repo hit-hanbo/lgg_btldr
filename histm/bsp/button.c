@@ -1,6 +1,7 @@
 #include "button.h"
 #include "arm_math.h"
 
+extern uint8_t bl_status;
 
 void bsp_HiSTM_button_init_IT(void)
 {
@@ -47,12 +48,12 @@ void bsp_HiSTM_button_init_IT(void)
 
 	nvic_init_struct.NVIC_IRQChannel = EXTI2_IRQn;
 	nvic_init_struct.NVIC_IRQChannelCmd = ENABLE;
-	nvic_init_struct.NVIC_IRQChannelPreemptionPriority = 5;
+	nvic_init_struct.NVIC_IRQChannelPreemptionPriority = 15;
 	nvic_init_struct.NVIC_IRQChannelSubPriority = 0;
 	NVIC_Init(&nvic_init_struct);
 	nvic_init_struct.NVIC_IRQChannel = EXTI15_10_IRQn;
 	nvic_init_struct.NVIC_IRQChannelCmd = ENABLE;
-	nvic_init_struct.NVIC_IRQChannelPreemptionPriority = 5;
+	nvic_init_struct.NVIC_IRQChannelPreemptionPriority = 15;
 	nvic_init_struct.NVIC_IRQChannelSubPriority = 0;
 	NVIC_Init(&nvic_init_struct);
 
@@ -77,9 +78,7 @@ void EXTI15_10_IRQHandler(void)
 	{
 		EXTI_ClearITPendingBit(EXTI_Line14);
 		//  do something
-		HiSTM_SCP_clear(0xFFFF);
-		HiSTM_SCP_display_string(0,0,"bootloader",HiSTM_SCP_CHARMODE_NOOVERLYING,0x0000,0xFFFF);
-		btldr_loop();
+		bl_status = 1;
 	}
 	/* key C callback */
 	else if(EXTI_GetITStatus(EXTI_Line15))
